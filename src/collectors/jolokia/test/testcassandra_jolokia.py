@@ -10,7 +10,7 @@ from mock import patch
 
 from diamond.collector import Collector
 
-from jolokia import CassandraJolokiaCollector
+from cassandra_jolokia import CassandraJolokiaCollector
 
 ################################################################################
 
@@ -21,35 +21,63 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
 
         self.collector = CassandraJolokiaCollector(config, None)
 
+    # Used for all the tests so the expected numbers are all the same.
+    def fixture_values_a(self):
+        return [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,1,1,8,5,6,1,6,5,3,8,9,10,7,8,7,5,5,5,3,3,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
+    def expected_percentiles_for_fixture_a(self, percentile_key):
+        return {
+            'p25': 192.0,
+            'p50': 398.0,
+            'p75': 824.0,
+            'p95': 2050.0,
+            'p99': 2952.0
+        }[percentile_key]
+
     def test_import(self):
         self.assertTrue(CassandraJolokiaCollector)
 
-    # @patch.object(Collector, 'publish')
-    # def test_should_work_with_real_data(self, publish_mock):
-    #     def se(url):
-    #         if url == 'http://localhost:8778/jolokia/list':
-    #             return self.getFixture('listing')
-    #         else:
-    #             return self.getFixture('stats')
-    #     patch_urlopen = patch('urllib2.urlopen', Mock(side_effect=se))
-
-    #     patch_urlopen.start()
-    #     self.collector.collect()
-    #     patch_urlopen.stop()
-
-    #     metrics = self.get_metrics()
-    #     self.setDocExample(collector=self.collector.__class__.__name__,
-    #                        metrics=metrics,
-    #                        defaultpath=self.collector.config['path'])
-    #     self.assertPublishedMany(publish_mock, metrics)
-
-    def test_should_cmopute_percentiles_accurately(self):
-        test_buckets_a = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,1,1,8,5,6,1,6,5,3,8,9,10,7,8,7,5,5,5,3,3,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        percentile_value = self.collector.compute_percentile(collector.create_offsets(90), test_buckets_a, 50)
+    def test_should_compute_percentiles_accurately(self):
+        ninety_offsets = self.collector.create_offsets(90)
+        percentile_value = self.collector.compute_percentile(ninety_offsets, self.fixture_values_a(), 50)
         self.assertEqual(percentile_value, 398.0)
 
-    # TODO(kr)
-    # regex for attributes
+    @patch.object(Collector, 'publish')
+    def test_should_not_collect_non_histogram_attributes(self, publish_mock):
+        self.collector.interpet_bean_with_list('RecentReadLatencyMicros', self.fixture_values_a())
+        self.assertPublishedMany(publish_mock, {})
+
+    @patch.object(Collector, 'publish')
+    def test_should_collect_metrics_histogram_attributes(self, publish_mock):
+        self.collector.interpet_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
+        self.assertPublishedMany(publish_mock, {
+            'RecentReadLatencyHistogramMicros.p50': self.expected_percentiles_for_fixture_a('p50'),
+            'RecentReadLatencyHistogramMicros.p95': self.expected_percentiles_for_fixture_a('p95'),
+            'RecentReadLatencyHistogramMicros.p99': self.expected_percentiles_for_fixture_a('p99')
+        })
+
+    @patch.object(Collector, 'publish')
+    def test_should_respect_percentiles_config(self, publish_mock):
+        self.collector.update_config({
+            'percentiles': '25,75'
+        })
+        self.collector.interpet_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
+        self.assertPublishedMany(publish_mock, {
+            'RecentReadLatencyHistogramMicros.p25': self.expected_percentiles_for_fixture_a('p25'),
+            'RecentReadLatencyHistogramMicros.p75': self.expected_percentiles_for_fixture_a('p75'),
+        })
+
+    @patch.object(Collector, 'publish')
+    def test_should_respect_attribute_regex_config(self, publish_mock):
+        self.collector.update_config({
+            'attribute_regex': '^WackyMetric'
+        })
+        self.collector.interpet_bean_with_list('WackyMetricSeventeen', self.fixture_values_a())
+        self.assertPublishedMany(publish_mock, {
+            'WackyMetricSeventeen.p50': self.expected_percentiles_for_fixture_a('p50'),
+            'WackyMetricSeventeen.p95': self.expected_percentiles_for_fixture_a('p95'),
+            'WackyMetricSeventeen.p99': self.expected_percentiles_for_fixture_a('p99')
+        })
 
 ################################################################################
 if __name__ == "__main__":
