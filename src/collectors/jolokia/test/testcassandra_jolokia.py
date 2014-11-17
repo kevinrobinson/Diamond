@@ -68,9 +68,9 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         })
 
     @patch.object(Collector, 'publish')
-    def test_should_respect_attribute_regex_config(self, publish_mock):
+    def test_should_respect_histogram_regex_config(self, publish_mock):
         self.collector.update_config({
-            'attribute_regex': '^WackyMetric'
+            'histogram_regex': '^WackyMetric'
         })
         self.collector.interpet_bean_with_list('WackyMetricSeventeen', self.fixture_values_a())
         self.assertPublishedMany(publish_mock, {

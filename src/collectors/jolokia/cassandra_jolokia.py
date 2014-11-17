@@ -5,15 +5,16 @@ Collects Cassandra JMX metrics from the Jolokia Agent.  Extends the JolokiaColle
 interpret Histogram beans with information about the distribution of request latencies.
 
 #### Example Configuration
-CassandraJolokiaCollector can be configured apply only to attributes that match a
-regular expression, and to collect specific percentiles from the histogram statistics.  The
-format is shown below with the default values.
+CassandraJolokiaCollector uses a regular expression to determine which attributes represent histograms.
+This regex can be overridden by providing a `histogram_regex` in your configuration.  You can also override
+`percentiles` to collect specific percentiles from the histogram statistics.  The format is shown below
+with the default values.
 
 CassandraJolokiaCollector.conf
 
 ```
     percentiles '50,95,99'
-    attribute_regex '.*HistogramMicros$'
+    histogram_regex '.*HistogramMicros$'
 ```
 """
 
@@ -29,7 +30,7 @@ class CassandraJolokiaCollector(JolokiaCollector):
         config_help = super(CassandraJolokiaCollector, self).get_default_config_help()
         config_help.update({
             'percentiles': 'Comma separated list of percentiles to be collected (e.g., "50,95,99").',
-            'attribute_regex': 'Filter to only process attributes that match this regex'
+            'histogram_regex': 'Filter to only process attributes that match this regex'
         })
         return config_help
 
@@ -38,30 +39,30 @@ class CassandraJolokiaCollector(JolokiaCollector):
         config = super(CassandraJolokiaCollector, self).get_default_config()
         config.update({
             'percentiles': '50,95,99',
-            'attribute_regex': '.*HistogramMicros$'
+            'histogram_regex': '.*HistogramMicros$'
         })
         return config
 
     def __init__(self, config, handlers):
         super(CassandraJolokiaCollector, self).__init__(config, handlers)
+        self.offsets = self.create_offsets(91)
         self.update_config(self.config)
 
     def update_config(self, config):
         if config.has_key('percentiles'):
             self.percentiles = map(int, string.split(config['percentiles'], ','))
-        if config.has_key('attribute_regex'):
-            self.attribute_regex = re.compile(config['attribute_regex'])
+        if config.has_key('histogram_regex'):
+            self.histogram_regex = re.compile(config['histogram_regex'])
 
-    # override: Interpret beans that match the `attribute_regex` as histograms, and collect
+    # override: Interpret beans that match the `histogram_regex` as histograms, and collect
     # percentiles from them.
     def interpet_bean_with_list(self, prefix, obj):
-        if not self.attribute_regex.match(prefix):
+        if not self.histogram_regex.match(prefix):
             return
 
         buckets = obj
-        offsets = self.create_offsets(len(obj))
         for percentile in self.percentiles:
-            percentile_value = self.compute_percentile(offsets, buckets, percentile)
+            percentile_value = self.compute_percentile(self.offsets, buckets, percentile)
             self.publish("%s.p%s" % (prefix, percentile), percentile_value)
 
     # Adapted from Cassandra docs: http://www.datastax.com/documentation/cassandra/2.0/cassandra/tools/toolsCFhisto.html
