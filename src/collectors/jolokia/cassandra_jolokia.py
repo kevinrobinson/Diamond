@@ -72,8 +72,10 @@ class CassandraJolokiaCollector(JolokiaCollector):
     # is calculated by multiplying the previous offset by 1.2, rounding up, and removing duplicates. The
     # offsets can range from 1 to approximately 25 million, with less precision as the offsets get larger.
     def compute_percentile(self, offsets, buckets, percentile_int):
-        non_zero_points = sum(buckets)
-        middle_point_index = math.floor(non_zero_points * (percentile_int / float(100)))
+        non_zero_points_sum = sum(buckets)
+        if non_zero_points_sum is 0:
+            return 0
+        middle_point_index = math.floor(non_zero_points_sum * (percentile_int / float(100)))
 
         points_seen = 0
         for index, bucket in enumerate(buckets):

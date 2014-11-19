@@ -25,6 +25,9 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
     def fixture_values_a(self):
         return [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,1,1,8,5,6,1,6,5,3,8,9,10,7,8,7,5,5,5,3,3,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
+    def empty_fixture_values(self):
+        return [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
     def expected_percentiles_for_fixture_a(self, percentile_key):
         return {
             'p25': 192.0,
@@ -41,6 +44,12 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         ninety_offsets = self.collector.create_offsets(90)
         percentile_value = self.collector.compute_percentile(ninety_offsets, self.fixture_values_a(), 50)
         self.assertEqual(percentile_value, 398.0)
+
+    def test_should_compute_percentiles_accurately_when_empty(self):
+        ninety_offsets = self.collector.create_offsets(90)
+        self.assertEqual(self.collector.compute_percentile(ninety_offsets, self.empty_fixture_values(), 50), 0.0)
+        self.assertEqual(self.collector.compute_percentile(ninety_offsets, self.empty_fixture_values(), 95), 0.0)
+        self.assertEqual(self.collector.compute_percentile(ninety_offsets, self.empty_fixture_values(), 99), 0.0)
 
     @patch.object(Collector, 'publish')
     def test_should_not_collect_non_histogram_attributes(self, publish_mock):
