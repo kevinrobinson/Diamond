@@ -144,9 +144,9 @@ class JolokiaCollector(diamond.collector.Collector):
             elif type(v) in [dict]:
                 self.collect_bean("%s.%s" % (prefix, k), v)
             elif type(v) in [list]:
-                self.interpet_bean_with_list(prefix, obj)
+                self.interpret_bean_with_list("%s.%s" % (prefix, k), v)
 
     # There's no unambiguous way to interpret list values, so
     # this hook lets subclasses handle them.
-    def interpet_bean_with_list(self, prefix, obj):
+    def interpret_bean_with_list(self, prefix, values):
         pass

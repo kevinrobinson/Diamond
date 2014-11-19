@@ -56,11 +56,11 @@ class CassandraJolokiaCollector(JolokiaCollector):
 
     # override: Interpret beans that match the `histogram_regex` as histograms, and collect
     # percentiles from them.
-    def interpet_bean_with_list(self, prefix, obj):
+    def interpret_bean_with_list(self, prefix, values):
         if not self.histogram_regex.match(prefix):
             return
 
-        buckets = obj
+        buckets = values
         for percentile in self.percentiles:
             percentile_value = self.compute_percentile(self.offsets, buckets, percentile)
             self.publish("%s.p%s" % (prefix, percentile), percentile_value)

@@ -44,12 +44,12 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
 
     @patch.object(Collector, 'publish')
     def test_should_not_collect_non_histogram_attributes(self, publish_mock):
-        self.collector.interpet_bean_with_list('RecentReadLatencyMicros', self.fixture_values_a())
+        self.collector.interpret_bean_with_list('RecentReadLatencyMicros', self.fixture_values_a())
         self.assertPublishedMany(publish_mock, {})
 
     @patch.object(Collector, 'publish')
     def test_should_collect_metrics_histogram_attributes(self, publish_mock):
-        self.collector.interpet_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
+        self.collector.interpret_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
         self.assertPublishedMany(publish_mock, {
             'RecentReadLatencyHistogramMicros.p50': self.expected_percentiles_for_fixture_a('p50'),
             'RecentReadLatencyHistogramMicros.p95': self.expected_percentiles_for_fixture_a('p95'),
@@ -61,7 +61,7 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         self.collector.update_config({
             'percentiles': '25,75'
         })
-        self.collector.interpet_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
+        self.collector.interpret_bean_with_list('RecentReadLatencyHistogramMicros', self.fixture_values_a())
         self.assertPublishedMany(publish_mock, {
             'RecentReadLatencyHistogramMicros.p25': self.expected_percentiles_for_fixture_a('p25'),
             'RecentReadLatencyHistogramMicros.p75': self.expected_percentiles_for_fixture_a('p75'),
@@ -72,7 +72,7 @@ class TestCassandraJolokiaCollector(CollectorTestCase):
         self.collector.update_config({
             'histogram_regex': '^WackyMetric'
         })
-        self.collector.interpet_bean_with_list('WackyMetricSeventeen', self.fixture_values_a())
+        self.collector.interpret_bean_with_list('WackyMetricSeventeen', self.fixture_values_a())
         self.assertPublishedMany(publish_mock, {
             'WackyMetricSeventeen.p50': self.expected_percentiles_for_fixture_a('p50'),
             'WackyMetricSeventeen.p95': self.expected_percentiles_for_fixture_a('p95'),
