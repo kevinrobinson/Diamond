@@ -13,8 +13,8 @@ with the default values.
 CassandraJolokiaCollector.conf
 
 ```
-    percentiles '50,95,99'
-    histogram_regex '.*HistogramMicros$'
+    percentiles 50,95,99
+    histogram_regex .*HistogramMicros$
 ```
 """
 
@@ -38,7 +38,7 @@ class CassandraJolokiaCollector(JolokiaCollector):
     def get_default_config(self):
         config = super(CassandraJolokiaCollector, self).get_default_config()
         config.update({
-            'percentiles': '50,95,99',
+            'percentiles': ['50','95','99'],
             'histogram_regex': '.*HistogramMicros$'
         })
         return config
@@ -50,7 +50,7 @@ class CassandraJolokiaCollector(JolokiaCollector):
 
     def update_config(self, config):
         if config.has_key('percentiles'):
-            self.percentiles = map(int, string.split(config['percentiles'], ','))
+            self.percentiles = map(int, config['percentiles'])
         if config.has_key('histogram_regex'):
             self.histogram_regex = re.compile(config['histogram_regex'])
 
